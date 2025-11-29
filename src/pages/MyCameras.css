@@ -1,0 +1,9 @@
+/* mycameras.css */
+.mycameras-page { display:flex; gap:16px; align-items:flex-start; }
+.map-area { flex: 1 1 auto; height: 520px; margin:16px; border-radius:8px; overflow:hidden; background:#f2f4f6; }
+.right-panel { width:320px; margin:16px; background:#fff; border-radius:8px; padding:12px; box-shadow: 0 6px 16px rgba(0,0,0,0.03); }
+.panel-header { display:flex; flex-direction:column; gap:8px; margin-bottom:8px; }
+.thumb-list { display:flex; flex-direction:column; gap:12px; }
+.thumb { display:flex; gap:12px; align-items:center; }
+.thumb img { width:96px; height:64px; object-fit:cover; border-radius:6px; }
+.thumb .meta .title { font-weight:600; }

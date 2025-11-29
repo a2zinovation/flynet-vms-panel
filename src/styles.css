@@ -1,0 +1,51 @@
+/* src/styles.css - minimal framework to match Figma layout */
+:root{
+  --sidebar-w: 260px;
+  --sidebar-collapsed-w: 72px;
+  --sidebar-bg: #fff;
+  --accent: #092645; /* deep blue for active */
+}
+
+*{box-sizing:border-box}
+html,body,#root{height:100%;margin:0;font-family:Inter,Arial,Helvetica,sans-serif;background:#f8fafc}
+
+.app-root{display:flex;min-height:100vh}
+.sidebar{
+  width:var(--sidebar-w);
+  background:var(--sidebar-bg);
+  border-right:1px solid #eee;
+  padding:16px 8px;
+  transition:width .2s ease;
+}
+.sidebar.collapsed{width:var(--sidebar-collapsed-w)}
+.sidebar .logo-area{display:flex;justify-content:center;padding:8px 0}
+.logo{width:120px}
+.sidebar.collapsed .logo{width:38px}
+.menu{margin-top:12px}
+.menu-item{display:flex;align-items:center;padding:10px;border-radius:8px;color:#2b3b45;text-decoration:none;margin:6px 4px}
+.menu-item .icon{width:40px;display:flex;justify-content:center}
+.menu-item .label{font-size:14px}
+.menu-item.active{background:var(--accent);color:white}
+
+.main-area{flex:1;display:flex;flex-direction:column}
+.app-header{height:64px;display:flex;justify-content:space-between;align-items:center;padding:0 18px;border-bottom:1px solid #eee;background:#fff}
+.header-left{display:flex;align-items:center;gap:12px}
+.hamburger{font-size:18px;padding:8px;border-radius:6px;background:#f2f6f9;border:0;cursor:pointer}
+.header-title{font-weight:700;color:#16324f}
+.header-right{display:flex;align-items:center;gap:8px}
+.icon-btn{border:0;background:transparent;font-size:18px;cursor:pointer}
+.signout{background:#e83b3b;color:#fff;border:0;padding:8px 12px;border-radius:8px;cursor:pointer}
+
+/* page content */
+.page-content{padding:20px 24px;flex:1;overflow:auto}
+.my-cameras-page{display:flex;gap:16px}
+.map-area{flex:1;background:#fff;border-radius:8px;padding:8px;overflow:hidden;min-height:460px}
+.right-panel{width:300px;background:#fff;border-radius:8px;padding:12px;height:460px;overflow:auto}
+.camera-list{margin-top:12px;display:flex;flex-direction:column;gap:12px}
+.camera-item{display:flex;gap:12px;align-items:center}
+.camera-item img{width:96px;height:64px;object-fit:cover;border-radius:8px}
+.camera-meta{font-size:13px}
+.panel-header{display:flex;flex-direction:column}
+
+.app-root.collapsed .sidebar{width:var(--sidebar-collapsed-w)}
+.app-root.collapsed .menu-item .label{display:none}
