@@ -13,6 +13,7 @@ import SmartMosaics from "./pages/SmartMosaics.jsx";
 
 import Cameras from "./pages/Cameras.jsx";
 import CamerasRegister from "./pages/CamerasRegister.jsx";
+import CameraView from "./pages/CameraView.jsx";
 import Alarms from "./pages/Alarms.jsx";
 import AlarmsRegister from "./pages/AlarmsRegister.jsx";
 import Groups from "./pages/Groups.jsx";
@@ -37,6 +38,7 @@ import RTSPs from "./pages/RTSPs.jsx";
 
 import Login from "./pages/Login.jsx"; // ⭐ RENAMED IMPORT TO LOGIN.JSX
 import Profile from "./pages/Profile.jsx";
+import RequireAuth from "./components/auth/RequireAuth.jsx";
 
 
 export default function App() {
@@ -47,13 +49,16 @@ export default function App() {
       {/* The root path "/" should now point directly to the Login page */}
       <Route path="/" element={<Login />} />
       
-      {/* 2. PROTECTED ROUTES: Wrapped by MainLayout (e.g., accessed after login) */}
-      {/* I've kept the authenticated routes nested under a separate segment, /app, 
-         to clearly separate them from the root login path. 
-         NOTE: If you still need the authenticated routes under '/', 
-         we will need to implement an AuthCheck component on the root route. 
-         For now, I'm using /app which is cleaner. */}
-      <Route path="/app" element={<MainLayout />}>
+      {/* 2. PROTECTED ROUTES: Wrapped by MainLayout (e.g., accessed after login) */}
+      {/* All routes under /app require authentication */}
+      <Route 
+        path="/app" 
+        element={
+          <RequireAuth>
+            <MainLayout />
+          </RequireAuth>
+        }
+      >
         {/* Default authenticated route redirects to the starting dashboard page */}
         <Route index element={<Navigate to="my-cameras" replace />} />
         
@@ -66,8 +71,9 @@ export default function App() {
         <Route path="smart-mosaic" element={<SmartMosaics />} />
 
         {/* Administration/Register features */}
-        <Route path="cameras" element={<Cameras />} />
-        <Route path="cameras/register" element={<CamerasRegister />} />
+        <Route path="cameras" element={<Cameras />} />
+        <Route path="cameras/register" element={<CamerasRegister />} />
+        <Route path="cameras/view/:id" element={<CameraView />} />
         <Route path="alarms" element={<Alarms />} />
         <Route path="alarms/register" element={<AlarmsRegister />} />
         <Route path="groups" element={<Groups />} />

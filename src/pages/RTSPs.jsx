@@ -1,203 +1,261 @@
-// src/pages/RTSPs.jsx
-import React, { useState } from "react";
+import React, { useState, useMemo } from 'react';
 import {
   Box,
   Typography,
-  Container,
-  Breadcrumbs,
-  Link as MuiLink,
+  Paper,
   TextField,
   Grid,
-  IconButton,
-  Card,
+  Button,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
   InputAdornment,
-} from "@mui/material";
+  Alert,
+  Chip,
+} from '@mui/material';
+import HomeIcon from '@mui/icons-material/Home';
+import ContentCopyIcon from '@mui/icons-material/ContentCopy';
+import SearchIcon from '@mui/icons-material/Search';
+import { Link } from 'react-router-dom';
 
-import HomeIcon from "@mui/icons-material/Home";
-import ChevronRightIcon from "@mui/icons-material/ChevronRight";
-import ContentCopyIcon from "@mui/icons-material/ContentCopy";
-import LiveTvIcon from "@mui/icons-material/LiveTv";
-import { Link as RouterLink } from "react-router-dom"; 
-
-// Define the fields with their placeholder text and descriptive helper text
-const FIELDS_DATA = [
-  { label: "User", helper: "User to access the camera (Ex.: admin)" },
-  { label: "Password", helper: "Password of the user to access the camera (Ex.: 123456)" },
-  { label: "Domain", helper: "Network IP address or DDNS (Ex.: my-camera.ddns.com.br or 123.456.78.9)" },
-  { label: "Port", helper: "RTSP port configured on the camera (the default port is 554 on most cameras)" },
-  { label: "Manufacturer", helper: "Filter the camera manufacturer's name." },
+const rtspTemplates = [
+  { manufacturer: 'Tenda', model: 'IT7-L PCS', template: 'rtsp://USER:PASSWORD@DOMAIN:PORT/profile0' },
+  { manufacturer: 'Tecvoz – TW', model: 'Câmeras IP', template: 'rtsp://USER:PASSWORD@DOMAIN:PORT/profile1' },
+  { manufacturer: 'Tecvoz – TW', model: 'DVR/NVR', template: 'rtsp://USER:PASSWORD@DOMAIN:PORT/chID=1&streamType=main&linkType=tcpa' },
+  { manufacturer: 'Tecvoz – T1/THK', model: 'DVR/NVR', template: 'rtsp://USER:PASSWORD@DOMAIN:PORT/Streaming/Channels/01' },
+  { manufacturer: 'Tecvoz - TVZ', model: 'DVR', template: 'rtsp://DOMAIN:PORT/user=USER&password=PASSWORD&channel=1&stream=0.sdp' },
+  { manufacturer: 'Tecvoz - Tecvoz TV', model: 'Cameras IP', template: 'rtsp://DOMAIN:PORT/user=USER&password=PASSWORD&channel=1&stream=1' },
+  { manufacturer: 'Tecvoz – T1/THK', model: 'Câmeras IP', template: 'rtsp://USER:PASSWORD@DOMAIN:PORT/Streaming/Channels/101' },
+  { manufacturer: 'Tecvoz – ICB Inteligente', model: 'Câmeras IP', template: 'rtsp://USER:PASSWORD@DOMAIN:PORT/mode=real&idc=1&ids=1' },
+  { manufacturer: 'Alive', model: 'Generic', template: 'rtsp://DOMAIN:PORT/user=USER&password=PASSWORD&channel=1&stream=0.sdp?real_stream' },
+  { manufacturer: 'Axis', model: 'Generic', template: 'rtsp://USER:PASSWORD@DOMAIN:PORT/axis-media/media.amp?videocodac=h264' },
+  { manufacturer: 'Clear', model: 'Generic', template: 'rtsp://DOMAIN:PORT/user=USER&password=PASSWORD&channel=1&stream=0.sdp' },
+  { manufacturer: 'Dahua', model: 'Generic', template: 'rtsp://DOMAIN:PORT/user=USER&password=PASSWORD&channel=1&stream=0.sdp?' },
+  { manufacturer: 'Dahua', model: 'IMOU', template: 'rtsp://USER:PASSWORD@DOMAIN:PORT/cam/realmonitor?channel=1&subtype=0' },
+  { manufacturer: 'Foscan', model: 'Generic', template: 'rtsp://USER:PASSWORD@DOMAIN:PORT/videoMain' },
+  { manufacturer: 'Greatek', model: 'Generic', template: 'rtsp://DOMAIN:PORT/user=USER&password=PASSWORD&channel=1&stream=0.sdp' },
+  { manufacturer: 'GIGA', model: 'Format 1', template: 'rtsp://DOMAIN:PORT/user=USER&password=PASSWORD&channel=1&stream=0.sdp' },
+  { manufacturer: 'HDL', model: 'Generic', template: 'rtsp://DOMAIN:PORT/user=USER&password=PASSWORD&channel=1&stream=0.sdp' },
+  { manufacturer: 'Hikvision', model: 'Format 1', template: 'rtsp://USER:PASSWORD@DOMAIN:PORT/h264/ch1/main/av_stream' },
+  { manufacturer: 'Hikvision', model: 'Format 2', template: 'rtsp://USER:PASSWORD@DOMAIN:PORT/Streaming/Channels/101' },
+  { manufacturer: 'HeroSpeed DVR', model: 'Generic', template: 'rtsp://USER:PASSWORD@DOMAIN:PORT/snap.jpg' },
+  { manufacturer: 'JFL', model: 'Generic', template: 'rtsp://USER:PASSWORD@DOMAIN:PORT/h264/ch1/main/av_stream' },
+  { manufacturer: 'Intelbras', model: 'Format 1', template: 'rtsp://USER:PASSWORD@DOMAIN:PORT/cam/realmonitor?channel=1&subtype=0' },
+  { manufacturer: 'Intelbras', model: 'Format 2', template: 'rtsp://DOMAIN:PORT/user=USER&password=PASSWORD&channel=1&stream=0.sdp?' },
+  { manufacturer: 'Jortan', model: 'Generic', template: 'rtsp://DOMAIN:PORT/user=USER&password=PASSWORD&channel=1&stream=0.sdp' },
+  { manufacturer: 'LG', model: 'Generic', template: 'rtsp://USER:PASSWORD@DOMAIN:PORT/Master-0' },
+  { manufacturer: 'LuxVision', model: 'Generic', template: 'rtsp://DOMAIN:PORT/user=USER&password=PASSWORD&channel=1&stream=0.sdp' },
+  { manufacturer: 'Multilaser', model: 'Generic', template: 'rtsp://USER:PASSWORD@DOMAIN:PORT/H264?ch=1&subtype=0' },
+  { manufacturer: 'Venetian', model: 'Format 1', template: 'rtsp://DOMAIN:PORT/user=USER&password=PASSWORD&channel=1&stream=0.sdp?' },
+  { manufacturer: 'Venetian', model: 'Format 2', template: 'rtsp://USER:PASSWORD@DOMAIN:PORT/cam/realmonitor?channel=1&subtype=0&unicast=true&proto=Onvif' },
+  { manufacturer: 'Vivotek', model: 'Generic', template: 'rtsp://USER:PASSWORD@DOMAIN:PORT/live.sdp' },
+  { manufacturer: 'TWG', model: 'Generic', template: 'rtsp://DOMAIN:PORT/user=USER&password=PASSWORD&channel=1&stream=0.sdp?' },
+  { manufacturer: 'Zavio', model: 'Generic', template: 'rtsp://USER:PASSWORD@DOMAIN:PORT/video.pro1' },
+  { manufacturer: 'RTSP Generic', model: 'Format 1', template: 'rtsp://USER:PASSWORD@DOMAIN:PORT' },
+  { manufacturer: 'RTSP Generic', model: 'Format 2', template: 'rtsp://USER:PASSWORD@DOMAIN:PORT/h264?channel=1' },
+  { manufacturer: 'RTSP Generic', model: 'Format 3', template: 'rtsp://DOMAIN:PORT/user=USER&password=PASSWORD&channel=1&stream=0.sdp' },
+  { manufacturer: 'RTSP Generic', model: 'Format 4', template: 'rtsp://USER:PASSWORD@DOMAIN:PORT/onvif1' },
+  { manufacturer: 'EZView', model: 'Main Stream', template: 'rtsp://USER:PASSWORD@DOMAIN:PORT/unicast/c1/s1/live' },
+  { manufacturer: 'EZView', model: 'Sub Stream', template: 'rtsp://USER:PASSWORD@DOMAIN:PORT/unicast/c1/s2/live' },
+  { manufacturer: 'EZView', model: 'IPC Main Stream', template: 'rtsp://USER:PASSWORD@DOMAIN:PORT/media/video1' },
+  { manufacturer: 'EZView', model: 'IPC Sub Stream', template: 'rtsp://USER:PASSWORD@DOMAIN:PORT/media/video2' },
 ];
 
 export default function RTSPs() {
-  const [inputValues, setInputValues] = useState({
-    User: 'USER', 
-    Password: 'PASSWORD', 
-    Domain: 'DOMAIN', 
-    Port: 'PORT', 
-    Manufacturer: '',
-  });
+  const [user, setUser] = useState('admin');
+  const [password, setPassword] = useState('');
+  const [domain, setDomain] = useState('192.168.1.100');
+  const [port, setPort] = useState('554');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [copiedIndex, setCopiedIndex] = useState(null);
 
-  const handleInputChange = (e, label) => {
-    // Retain the static placeholder values for the URL if the field is empty
-    const value = e.target.value.trim() || label.toUpperCase();
-    setInputValues({ ...inputValues, [label]: value });
-  };
-
-  const rtspUrl = `rtsp://${inputValues.User}:${inputValues.Password}@${inputValues.Domain}:${inputValues.Port}/profile0`;
-
-  const handleCopy = () => {
-    navigator.clipboard.writeText(rtspUrl);
-  };
-  
-  // Custom component to handle the specific input structure (Input on left, Description on right)
-  const InputRowFidelity = ({ field }) => {
-    return (
-        <Grid container alignItems="center" spacing={3} sx={{ mb: 1 }}>
-            {/* Column 1: Input Field */}
-            <Grid item xs={12} sm={4} md={3}>
-                <TextField
-                    fullWidth
-                    size="small"
-                    label={field.label}
-                    placeholder={field.label}
-                    value={field.label === 'Manufacturer' ? inputValues.Manufacturer : undefined}
-                    onChange={(e) => handleInputChange(e, field.label)}
-                    sx={{
-                        "& .MuiOutlinedInput-root": {
-                            borderRadius: "8px",
-                            background: "#F7F8FA",
-                            minWidth: 140, // Ensure fields are wide enough on large screens
-                        },
-                        "& .MuiInputLabel-root": {
-                            fontSize: 14,
-                        },
-                    }}
-                    // If it's a URL component, it should not have a label when using the dynamic value,
-                    // but since the Figma design shows a label, we keep it for fidelity.
-                    InputLabelProps={{ shrink: field.label !== 'Manufacturer' }}
-                />
-            </Grid>
-
-            {/* Column 2: Description/Helper Text (RIGHT ALIGNED - Figma Fidelity) */}
-            <Grid item xs={12} sm={8} md={9}>
-                <Typography sx={{ fontSize: 14, color: "#6C7A91" }}>
-                    {field.helper}
-                </Typography>
-            </Grid>
-        </Grid>
+  const filteredTemplates = useMemo(() => {
+    if (!searchQuery) return rtspTemplates;
+    const query = searchQuery.toLowerCase();
+    return rtspTemplates.filter(
+      (t) =>
+        t.manufacturer.toLowerCase().includes(query) ||
+        t.model.toLowerCase().includes(query)
     );
+  }, [searchQuery]);
+
+  const buildRTSPUrl = (template) => {
+    return template
+      .replace('USER', user)
+      .replace('PASSWORD', password)
+      .replace('DOMAIN', domain)
+      .replace('PORT', port);
+  };
+
+  const copyToClipboard = (text, index) => {
+    navigator.clipboard.writeText(text).then(() => {
+      setCopiedIndex(index);
+      setTimeout(() => setCopiedIndex(null), 2000);
+    });
   };
 
   return (
-    <Container maxWidth="xl" sx={{ py: 3 }}>
-      {/* HEADER + BREADCRUMB */}
-      <Grid container justifyContent="space-between" alignItems="center" sx={{ mb: 4 }}>
-        <Grid item>
-          <Typography sx={{ fontSize: 26, fontWeight: 700, color: '#0C1B33' }}>
-            RTSPs address list
-          </Typography>
-        </Grid>
-
-        <Grid item>
-          <Breadcrumbs
-            separator={<ChevronRightIcon fontSize="small" sx={{ color: '#6C7A91' }} />}
-            aria-label="breadcrumb"
-          >
-            {/* Link: Home */}
-            <MuiLink
-                component={RouterLink}
-                to="/app"
-                underline="hover"
-                color="inherit"
-                sx={{ display: "flex", alignItems: "center", gap: 0.5, fontSize: 13, color: '#6C7A91', textDecoration: 'none' }}
-            >
-              <HomeIcon fontSize="small" /> Home
-            </MuiLink>
-
-            {/* Link: Help */}
-            <MuiLink 
-                component={RouterLink}
-                to="/help" // Placeholder link
-                underline="hover" 
-                color="inherit"
-                sx={{ display: "flex", alignItems: "center", gap: 0.5, fontSize: 13, color: '#6C7A91', textDecoration: 'none' }}
-            >
-              <LiveTvIcon fontSize="small" sx={{ mr: 0.5 }} />
-              help
-            </MuiLink>
-
-            {/* Current Page: RTSPs address list */}
-            <Typography sx={{ color: '#0C1B33', fontWeight: 600, fontSize: 13, display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                <LiveTvIcon fontSize="small" />
-                RTSPs address list
-            </Typography>
-          </Breadcrumbs>
-        </Grid>
-      </Grid>
-
-      {/* MAIN CARD */}
-      <Card
-        elevation={0}
-        sx={{
-          mt: 1, 
-          p: 3,
-          borderRadius: "14px",
-          background: "#fff",
-          border: "1px solid #E6E8EC",
-        }}
-      >
-        {/* DESCRIPTION */}
-        <Typography sx={{ fontSize: 14, color: "#4A5773", mb: 3, lineHeight: 1.7 }}>
-          Check below for a list of the most popular RTSP addresses on the
-          market.  
-          <br />
-          <br />
-          Fill in the fields and then copy the link, according to the
-          manufacturer's brand. Use it when registering a new camera on the
-          platform.
+    <Box sx={{ p: 3 }}>
+      {/* Breadcrumbs */}
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 3 }}>
+        <HomeIcon sx={{ fontSize: 20, color: 'text.secondary' }} />
+        <Typography variant="body2" color="text.secondary">
+          /
         </Typography>
+        <Typography variant="body2" color="text.secondary">
+          RTSPs Address List
+        </Typography>
+      </Box>
 
-        {/* INPUTS AND DESCRIPTIONS (Fidelity matched layout) */}
-        <Box sx={{ mb: 3 }}>
-          {FIELDS_DATA.map((field) => (
-            <InputRowFidelity field={field} key={field.label} />
-          ))}
-        </Box>
-        
-        {/* MANUFACTURER SECTION (Tenda) */}
-        <Box sx={{ mt: 3 }}>
-          <Typography sx={{ fontWeight: 700, mb: 0.5, color: '#0C1B33' }}>Tenda</Typography>
-          <Typography sx={{ color: "#4A5773", fontSize: 14, mb: 1 }}>
-            IT7-L PCS
+      {/* Page Title */}
+      <Typography variant="h5" fontWeight={600} sx={{ mb: 3 }}>
+        RTSPs Address List
+      </Typography>
+
+      <Alert severity="info" sx={{ mb: 3 }}>
+        Fill in the fields below and then copy the generated RTSP link according to the manufacturer's brand.
+        Use it when registering a new camera on the platform.
+      </Alert>
+
+      {/* Input Fields */}
+      <Paper sx={{ p: 3, mb: 3 }}>
+        <Typography variant="h6" gutterBottom>
+          Connection Details
+        </Typography>
+        <Grid container spacing={2}>
+          <Grid item xs={12} md={3}>
+            <TextField
+              fullWidth
+              label="User"
+              value={user}
+              onChange={(e) => setUser(e.target.value)}
+              placeholder="admin"
+              helperText="Username to access the camera"
+            />
+          </Grid>
+          <Grid item xs={12} md={3}>
+            <TextField
+              fullWidth
+              label="Password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="1234"
+              helperText="Password for camera access"
+              type="password"
+            />
+          </Grid>
+          <Grid item xs={12} md={4}>
+            <TextField
+              fullWidth
+              label="Domain"
+              value={domain}
+              onChange={(e) => setDomain(e.target.value)}
+              placeholder="192.168.1.100 or my-camera.ddns.com"
+              helperText="Network IP address or DDNS"
+            />
+          </Grid>
+          <Grid item xs={12} md={2}>
+            <TextField
+              fullWidth
+              label="Port"
+              value={port}
+              onChange={(e) => setPort(e.target.value)}
+              placeholder="554"
+              helperText="RTSP port (default: 554)"
+            />
+          </Grid>
+        </Grid>
+      </Paper>
+
+      {/* Search */}
+      <Paper sx={{ p: 2, mb: 2 }}>
+        <TextField
+          fullWidth
+          placeholder="Search manufacturer or model..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          InputProps={{
+            startAdornment: (
+              <InputAdornment position="start">
+                <SearchIcon />
+              </InputAdornment>
+            ),
+          }}
+        />
+      </Paper>
+
+      {/* Templates Table */}
+      <TableContainer component={Paper}>
+        <Table>
+          <TableHead>
+            <TableRow sx={{ bgcolor: '#f5f5f5' }}>
+              <TableCell><strong>Manufacturer</strong></TableCell>
+              <TableCell><strong>Model/Type</strong></TableCell>
+              <TableCell><strong>RTSP URL Template</strong></TableCell>
+              <TableCell align="center"><strong>Actions</strong></TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {filteredTemplates.map((item, index) => {
+              const generatedUrl = buildRTSPUrl(item.template);
+              return (
+                <TableRow key={index} hover>
+                  <TableCell>
+                    <Chip label={item.manufacturer} size="small" color="primary" variant="outlined" />
+                  </TableCell>
+                  <TableCell>{item.model}</TableCell>
+                  <TableCell>
+                    <Box
+                      sx={{
+                        fontFamily: 'monospace',
+                        fontSize: '0.85rem',
+                        bgcolor: '#f9f9f9',
+                        p: 1,
+                        borderRadius: 1,
+                        wordBreak: 'break-all',
+                      }}
+                    >
+                      {generatedUrl}
+                    </Box>
+                  </TableCell>
+                  <TableCell align="center">
+                    <Button
+                      size="small"
+                      variant={copiedIndex === index ? 'contained' : 'outlined'}
+                      startIcon={<ContentCopyIcon />}
+                      onClick={() => copyToClipboard(generatedUrl, index)}
+                      color={copiedIndex === index ? 'success' : 'primary'}
+                    >
+                      {copiedIndex === index ? 'Copied!' : 'Copy'}
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              );
+            })}
+          </TableBody>
+        </Table>
+      </TableContainer>
+
+      {filteredTemplates.length === 0 && (
+        <Box sx={{ textAlign: 'center', py: 4 }}>
+          <Typography color="text.secondary">
+            No manufacturers found matching "{searchQuery}"
           </Typography>
-
-          <Box
-            sx={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: 'space-between',
-              gap: 2,
-              background: "#F1F3F5",
-              px: 2,
-              py: 1.5,
-              borderRadius: "10px",
-              border: "1px solid #E0E3E7",
-              width: 'fit-content' // Keeps the box contained, as in the Figma screenshot
-            }}
-          >
-            <Typography sx={{ fontSize: 15, fontWeight: 500, color: '#333' }}>
-              {/* Dynamically generated RTSP URL based on input */}
-              {rtspUrl}
-            </Typography>
-
-            <IconButton size="small" onClick={handleCopy} sx={{ flexShrink: 0, color: '#0C1B33' }}>
-              <ContentCopyIcon fontSize="small" />
-            </IconButton>
-          </Box>
         </Box>
+      )}
 
-        <Box sx={{ height: 40 }} />
-      </Card>
-    </Container>
+      <Box sx={{ mt: 3, display: 'flex', justifyContent: 'center' }}>
+        <Button
+          variant="contained"
+          component={Link}
+          to="/app/cameras/register"
+        >
+          Register New Camera
+        </Button>
+      </Box>
+    </Box>
   );
 }

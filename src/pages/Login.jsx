@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
 import {
   Box,
   Typography,
@@ -10,6 +11,8 @@ import {
   DialogContent,
   IconButton,
   Divider,
+  Alert,
+  CircularProgress,
 } from "@mui/material";
 
 // Icons
@@ -177,15 +180,38 @@ const styles = {
 
 function EmailPasswordView({ onForgotPassword, onViewChange }) {
   const navigate = useNavigate();
+  const { login } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
-  const [email, setEmail] = useState("test@gmail.com");
-  const [password, setPassword] = useState("********");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
-  const handleLogin = () => {
-    // *** FIX IMPLEMENTED HERE ***
-    console.log("Attempting login with:", email, password);
-    // On successful login, navigate to the authenticated app root path
-    navigate("/app"); 
+  const handleLogin = async () => {
+    setError("");
+    
+    if (!email || !password) {
+      setError("Please enter both email and password");
+      return;
+    }
+
+    setLoading(true);
+    
+    try {
+      const result = await login(email, password);
+      
+      if (result.success) {
+        // Navigate to app on successful login
+        navigate("/app");
+      } else {
+        setError(result.message || "Invalid credentials");
+      }
+    } catch (err) {
+      setError("An error occurred. Please try again.");
+      console.error("Login error:", err);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -199,9 +225,16 @@ function EmailPasswordView({ onForgotPassword, onViewChange }) {
         startIcon={<QrCodeScannerIcon />}
         sx={styles.qrCodeButton}
         onClick={() => onViewChange(VIEWS.QR_CODE)}
+        disabled={loading}
       >
         Log in with QR code
       </Button>
+
+      {error && (
+        <Alert severity="error" sx={{ mb: 2 }}>
+          {error}
+        </Alert>
+      )}
 
       <TextField
         fullWidth
@@ -211,6 +244,12 @@ function EmailPasswordView({ onForgotPassword, onViewChange }) {
         onChange={(e) => setEmail(e.target.value)}
         sx={styles.textField}
         placeholder="Enter your email"
+        disabled={loading}
+        onKeyPress={(e) => {
+          if (e.key === 'Enter') {
+            handleLogin();
+          }
+        }}
       />
 
       <TextField
@@ -222,6 +261,12 @@ function EmailPasswordView({ onForgotPassword, onViewChange }) {
         onChange={(e) => setPassword(e.target.value)}
         sx={styles.textField}
         placeholder="Enter your password"
+        disabled={loading}
+        onKeyPress={(e) => {
+          if (e.key === 'Enter') {
+            handleLogin();
+          }
+        }}
         InputProps={{
           endAdornment: (
             <InputAdornment position="end">
@@ -230,6 +275,7 @@ function EmailPasswordView({ onForgotPassword, onViewChange }) {
                 onClick={() => setShowPassword(!showPassword)}
                 edge="end"
                 size="small"
+                disabled={loading}
               >
                 {showPassword ? <VisibilityOff /> : <Visibility />}
               </IconButton>
@@ -242,8 +288,9 @@ function EmailPasswordView({ onForgotPassword, onViewChange }) {
         variant="contained"
         sx={styles.loginButton}
         onClick={handleLogin}
+        disabled={loading}
       >
-        Login
+        {loading ? <CircularProgress size={24} color="inherit" /> : "Login"}
       </Button>
 
       <Typography
@@ -309,15 +356,54 @@ function QRCodeView({ onViewChange }) {
 export default function Login() {
   const [view, setView] = useState(VIEWS.EMAIL_PASSWORD);
   const [isForgotDialogOpen, setIsForgotDialogOpen] = useState(false);
-  const [forgotEmail, setForgotEmail] = useState("test@Gmail.com"); 
+  const [forgotEmail, setForgotEmail] = useState(""); 
+  const [forgotLoading, setForgotLoading] = useState(false);
+  const [forgotSuccess, setForgotSuccess] = useState("");
+  const [forgotError, setForgotError] = useState("");
 
   // --- Handlers ---
-  const handleForgotOpen = () => setIsForgotDialogOpen(true);
-  const handleForgotClose = () => setIsForgotDialogOpen(false);
+  const handleForgotOpen = () => {
+    setForgotEmail("");
+    setForgotSuccess("");
+    setForgotError("");
+    setIsForgotDialogOpen(true);
+  };
+  
+  const handleForgotClose = () => {
+    setIsForgotDialogOpen(false);
+    setForgotSuccess("");
+    setForgotError("");
+  };
 
-  const handleForgotConfirm = () => {
-    console.log("Password reset requested for:", forgotEmail);
-    handleForgotClose();
+  const handleForgotConfirm = async () => {
+    setForgotError("");
+    setForgotSuccess("");
+    
+    if (!forgotEmail) {
+      setForgotError("Please enter your email address");
+      return;
+    }
+
+    setForgotLoading(true);
+    
+    try {
+      const { authService } = await import("../services/auth");
+      const result = await authService.requestPasswordReset(forgotEmail);
+      
+      if (result.success) {
+        setForgotSuccess(result.message || "Password reset email sent successfully!");
+        setTimeout(() => {
+          handleForgotClose();
+        }, 2000);
+      } else {
+        setForgotError(result.message || "Failed to send reset email");
+      }
+    } catch (error) {
+      setForgotError("An error occurred. Please try again.");
+      console.error("Password reset error:", error);
+    } finally {
+      setForgotLoading(false);
+    }
   };
 
   const renderRightPanelContent = () => {
@@ -370,11 +456,26 @@ export default function Login() {
             Forgot your password?
           </Typography>
 
+          {forgotSuccess && (
+            <Alert severity="success" sx={{ my: 2 }}>
+              {forgotSuccess}
+            </Alert>
+          )}
+
+          {forgotError && (
+            <Alert severity="error" sx={{ my: 2 }}>
+              {forgotError}
+            </Alert>
+          )}
+
           <TextField
             fullWidth
             variant="outlined"
+            label="Email"
+            placeholder="Enter your email"
             value={forgotEmail}
             onChange={(e) => setForgotEmail(e.target.value)}
+            disabled={forgotLoading}
             sx={{ my: 2 }}
           />
 
@@ -383,6 +484,7 @@ export default function Login() {
               onClick={handleForgotClose}
               variant="contained"
               sx={styles.dialogCancelButton}
+              disabled={forgotLoading}
             >
               Cancel
             </Button>
@@ -390,8 +492,9 @@ export default function Login() {
               onClick={handleForgotConfirm}
               variant="contained"
               sx={styles.dialogConfirmButton}
+              disabled={forgotLoading}
             >
-              Confirm
+              {forgotLoading ? <CircularProgress size={20} color="inherit" /> : "Confirm"}
             </Button>
           </Box>
         </DialogContent>

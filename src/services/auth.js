@@ -1,102 +1,191 @@
 // src/services/auth.js
-// Hybrid API: mock enabled but easily switch to real API
+// Authentication service for Laravel backend
 
-const API_BASE = "https://your-real-api.com"; // <-- CHANGE THIS
+import apiFetch, { setAuthToken, removeAuthToken, setStoredUser, removeStoredUser } from './api';
 
-// Toggle mock mode on/off
-const USE_MOCK = false;  // true = simulate backend, false = real backend
-
-// Simulated delay (for loading UI realism)
-const wait = (ms) => new Promise((res) => setTimeout(res, ms));
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
 
 export const authService = {
+  /**
+   * Login with email and password
+   * @param {string} email 
+   * @param {string} password 
+   * @returns {Promise} Login response with token and user data
+   */
   login: async (email, password) => {
-    if (USE_MOCK) {
-      await wait(800);
-
-      if (email === "test@gmail.com" && password === "123456") {
-        return {
-          success: true,
-          token: "MOCK_TOKEN_123",
-          user: {
-            id: 1,
-            name: "Test User",
-            email,
-          },
-        };
-      }
-
-      return { success: false, message: "Invalid credentials" };
-    }
-
-    // REAL API ======================================
     try {
-      const res = await fetch(`${API_BASE}/auth/login`, {
-        method: "POST",
+      const response = await fetch(`${API_BASE_URL}/login`, {
+        method: 'POST',
         headers: {
-          "Content-Type": "application/json",
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
         },
         body: JSON.stringify({ email, password }),
       });
 
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message || "Login failed");
+      const data = await response.json();
 
-      return data; // must contain { token, user }
-    } catch (err) {
-      return { success: false, message: err.message };
+      // Handle Laravel API response structure
+      // API returns: { Success: true, Data: { token, user info }, Message }
+      const success = data.Success || data.success;
+      const userData = data.Data || data.data || data.user;
+      const token = userData?.token || data.token;
+      const message = data.Message || data.message;
+
+      if (!response.ok || !success) {
+        return { 
+          success: false, 
+          message: message || 'Invalid credentials login' 
+        };
+      }
+
+      // Store token and user data
+      if (token) {
+        setAuthToken(token);
+      }
+      if (userData) {
+        // Store user data without the token field
+        const { token: _, ...userWithoutToken } = userData;
+        setStoredUser(userWithoutToken);
+      }
+
+      return {
+        success: true,
+        token: token,
+        user: userData,
+      };
+    } catch (error) {
+      console.error('Login error:', error);
+      return { 
+        success: false, 
+        message: error.message || 'Network error. Please try again.' 
+      };
     }
   },
 
-  requestPasswordReset: async (email) => {
-    if (USE_MOCK) {
-      await wait(700);
-      return { success: true };
-    }
-
+  /**
+   * Logout current user
+   * @returns {Promise} Logout response
+   */
+  logout: async () => {
     try {
-      const res = await fetch(`${API_BASE}/auth/forgot-password`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+      // Call logout endpoint to invalidate token on server
+      await apiFetch('/logout', {
+        method: 'POST',
+      });
+    } catch (error) {
+      console.error('Logout error:', error);
+    } finally {
+      // Always clear local storage
+      removeAuthToken();
+      removeStoredUser();
+    }
+  },
+
+  /**
+   * Request password reset
+   * @param {string} email 
+   * @returns {Promise} Password reset response
+   */
+  requestPasswordReset: async (email) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/forgot-password`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
         body: JSON.stringify({ email }),
       });
 
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message);
+      const data = await response.json();
 
-      return data;
-    } catch (err) {
-      return { success: false, message: err.message };
+      if (!response.ok) {
+        return { 
+          success: false, 
+          message: data.message || 'Failed to send reset email' 
+        };
+      }
+
+      return {
+        success: true,
+        message: data.message || 'Password reset email sent successfully',
+      };
+    } catch (error) {
+      console.error('Password reset error:', error);
+      return { 
+        success: false, 
+        message: error.message || 'Network error. Please try again.' 
+      };
     }
   },
 
+  /**
+   * Login with QR code
+   * @param {string} qrToken 
+   * @returns {Promise} Login response
+   */
   loginWithQR: async (qrToken) => {
-    if (USE_MOCK) {
-      await wait(1200);
-      return {
-        success: true,
-        token: "QR_MOCK_TOKEN_999",
-        user: {
-          id: 1,
-          name: "QR User",
-          email: "qr@user.com",
-        },
-      };
-    }
-
     try {
-      const res = await fetch(`${API_BASE}/auth/qr-login`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ qrToken }),
+      const response = await fetch(`${API_BASE_URL}/qr-login`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: JSON.stringify({ qr_token: qrToken }),
       });
 
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message);
+      const data = await response.json();
 
-      return data;
-    } catch (err) {
-      return { success: false, message: err.message };
+      if (!response.ok) {
+        return { 
+          success: false, 
+          message: data.message || 'QR login failed' 
+        };
+      }
+
+      // Store token and user data
+      if (data.token) {
+        setAuthToken(data.token);
+      }
+      if (data.user) {
+        setStoredUser(data.user);
+      }
+
+      return {
+        success: true,
+        token: data.token,
+        user: data.user,
+      };
+    } catch (error) {
+      console.error('QR login error:', error);
+      return { 
+        success: false, 
+        message: error.message || 'Network error. Please try again.' 
+      };
     }
+  },
+
+  /**
+   * Get current user profile
+   * @returns {Promise} User profile data
+   */
+  getProfile: async () => {
+    return await apiFetch('/profile', {
+      method: 'GET',
+    });
+  },
+
+  /**
+   * Update user profile
+   * @param {Object} profileData 
+   * @returns {Promise} Updated profile
+   */
+  updateProfile: async (profileData) => {
+    return await apiFetch('/profile', {
+      method: 'PUT',
+      body: profileData,
+    });
   },
 };

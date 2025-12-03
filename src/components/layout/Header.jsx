@@ -1,6 +1,7 @@
 // src/components/layout/Header.jsx (FINAL FIX: Stable Header with Logout Dialog)
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom"; 
+import { useAuth } from "../../context/AuthContext";
 
 // Import MUI components
 import { 
@@ -30,46 +31,45 @@ const LANGS = [
 ];
 
 export default function Header() {
-  const navigate = useNavigate(); 
-  const [anchorEl, setAnchorEl] = useState(null); 
-  const [selectedLang, setSelectedLang] = useState(LANGS[1]); 
+  const navigate = useNavigate(); 
+  const { logout, user } = useAuth();
+  const [anchorEl, setAnchorEl] = useState(null); 
+  const [selectedLang, setSelectedLang] = useState(LANGS[1]); 
   // ⭐ State for Logout Dialog visibility
   const [isLogoutDialogOpen, setIsLogoutDialogOpen] = useState(false); 
 
 
-  // --- Navigation & Language Handlers ---
+  // --- Navigation & Language Handlers ---
 
-  const handleLangClick = (event) => {
-    setAnchorEl(event.currentTarget);
-  };
+  const handleLangClick = (event) => {
+    setAnchorEl(event.currentTarget);
+  };
 
-  const handleLangClose = () => {
-    setAnchorEl(null);
-  };
+  const handleLangClose = () => {
+    setAnchorEl(null);
+  };
 
-  const handleLangSelect = (lang) => {
-    setSelectedLang(lang);
-    handleLangClose();
-  };
-  
+  const handleLangSelect = (lang) => {
+    setSelectedLang(lang);
+    handleLangClose();
+  };
+  
   // ⭐ 1. Function to open the confirmation dialog
-  const handleSignOutClick = () => {
-      setIsLogoutDialogOpen(true);
-  };
+  const handleSignOutClick = () => {
+      setIsLogoutDialogOpen(true);
+  };
 
-  // ⭐ 2. Function executed upon confirmation (Clears state, redirects)
-  const handleConfirmLogout = () => {
-      setIsLogoutDialogOpen(false);
-      console.log("User confirmed sign out. Redirecting to login page (/).");
-      navigate("/"); 
-  };
-  
-  // ⭐ 3. Function to cancel the logout
-  const handleCancelLogout = () => {
-      setIsLogoutDialogOpen(false);
-  };
-
-  // Note: The original simple handleSignOut has been replaced by handleSignOutClick
+  // ⭐ 2. Function executed upon confirmation (Logout and redirect)
+  const handleConfirmLogout = async () => {
+      setIsLogoutDialogOpen(false);
+      await logout();
+      navigate("/"); 
+  };
+  
+  // ⭐ 3. Function to cancel the logout
+  const handleCancelLogout = () => {
+      setIsLogoutDialogOpen(false);
+  };  // Note: The original simple handleSignOut has been replaced by handleSignOutClick
 
   const open = Boolean(anchorEl);
   const id = open ? 'language-popover' : undefined;
