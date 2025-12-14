@@ -127,8 +127,21 @@ export default function Cameras() {
   // Fetch cameras and stats on mount
   useEffect(() => {
     fetchCameras();
-    fetchStats();
   }, []);
+
+  // Calculate stats whenever cameras list changes
+  useEffect(() => {
+    if (cameras.length > 0) {
+      const online = cameras.filter(c => c.status === 'active').length;
+      const offline = cameras.filter(c => c.status === 'inactive' || !c.status).length;
+      setStats({
+        total: cameras.length,
+        online,
+        offline,
+        unstable: 0,
+      });
+    }
+  }, [cameras]);
 
   const fetchCameras = async () => {
     try {
@@ -136,14 +149,22 @@ export default function Cameras() {
       setError("");
       const response = await cameraService.getAll();
       
-      // Handle different response structures
-      if (response.data) {
-        setCameras(Array.isArray(response.data) ? response.data : []);
+      // Handle standardized API response: { status: 'success', data: { data: [...], pagination }, message: '...' }
+      // The pagination structure has a nested 'data' array
+      let cameraData = [];
+      
+      if (response.data && Array.isArray(response.data)) {
+        // New format: { data: { data: [...] } }
+        cameraData = response.data;
+      } else if (response.data && response.data.data && Array.isArray(response.data.data)) {
+        // Alternative format: { data: { data: [...], total, ... } }
+        cameraData = response.data.data;
       } else if (Array.isArray(response)) {
-        setCameras(response);
-      } else {
-        setCameras([]);
+        // Direct array response
+        cameraData = response;
       }
+      
+      setCameras(cameraData);
     } catch (err) {
       console.error("Error fetching cameras:", err);
       setError(err.message || "Failed to load cameras");
@@ -158,10 +179,28 @@ export default function Cameras() {
       const response = await cameraService.getStats();
       if (response.data) {
         setStats(response.data);
+      } else if (response.total !== undefined) {
+        // Calculate stats from camera list if stats endpoint not available
+        const online = cameras.filter(c => c.status === 'active').length;
+        const offline = cameras.filter(c => c.status === 'inactive' || !c.status).length;
+        setStats({
+          total: cameras.length,
+          online,
+          offline,
+          unstable: 0,
+        });
       }
     } catch (err) {
       console.error("Error fetching stats:", err);
-      // Don't show error for stats, use defaults
+      // Calculate from camera list as fallback
+      const online = cameras.filter(c => c.status === 'active').length;
+      const offline = cameras.filter(c => c.status === 'inactive' || !c.status).length;
+      setStats({
+        total: cameras.length,
+        online,
+        offline,
+        unstable: 0,
+      });
     }
   };
 
@@ -189,7 +228,7 @@ export default function Cameras() {
   const handleMigrateConfirm = async () => {
     try {
       // Call API to migrate server
-      await cameraService.update(selectedCamera.id, { server: migrateServer });
+      await cameraService.migrateServer(selectedCamera.id, migrateServer);
       setSnackbar({ open: true, message: "Camera migrated successfully", severity: "success" });
       fetchCameras();
     } catch (err) {
@@ -207,7 +246,7 @@ export default function Cameras() {
 
   const handleCommentSave = async (cameraId) => {
     try {
-      await cameraService.update(cameraId, { comments: commentValue });
+      await cameraService.updateComments(cameraId, commentValue);
       setSnackbar({ open: true, message: "Comment updated", severity: "success" });
       fetchCameras();
       setEditingComment(null);
@@ -355,7 +394,7 @@ export default function Cameras() {
             </Grid>
             <Grid item minWidth={200} boxShadow={1}  xs={6} sm={3} md={2} sx={{ borderRadius: '16px' }}>
               <StatCard
-                label="Online"
+                label="Active"
                 value={loading ? "..." : stats.online || 0}
                 bg="#7AE79A"
                 icon={<WifiRoundedIcon sx={{ color: "#ffffff" }} />}
@@ -363,7 +402,7 @@ export default function Cameras() {
             </Grid>
             <Grid item minWidth={200} boxShadow={1}  xs={6} sm={3} md={2} sx={{ borderRadius: '16px' }}>
               <StatCard
-                label="Offline"
+                label="Inactive"
                 value={loading ? "..." : stats.offline || 0}
                 bg="#65696B"
                 icon={<WifiOffRoundedIcon sx={{ color: "#ffffff" }} />}
@@ -502,14 +541,14 @@ export default function Cameras() {
                     <TableCell>
                       <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
                         <FiberManualRecordIcon
-                          sx={{ fontSize: 12, color: r.status === "online" ? "#28A745" : "#FF8A65" }}
+                          sx={{ fontSize: 12, color: r.status === "active" ? "#28A745" : "#FF8A65" }}
                         />
                         <Typography>{r.name || "Unnamed"}</Typography>
                       </Box>
                     </TableCell>
-                    <TableCell>{r.type || "-"}</TableCell>
-                    <TableCell>{r.analytical || "-"}</TableCell>
-                    <TableCell>{r.host || "-"}</TableCell>
+                    <TableCell>{r.protocol || r.type || "-"}</TableCell>
+                    <TableCell>{r.analytical === 0 || r.analytical === "0" ? "0" : (r.analytical || "-")}</TableCell>
+                    <TableCell>{r.server || r.host || "-"}</TableCell>
                     <TableCell>
                       {r.storage && (
                         <Box
@@ -544,11 +583,21 @@ export default function Cameras() {
                       )}
                     </TableCell>
                     <TableCell>
-                      {r.status === "online" ? (
-                        <CheckCircleIcon sx={{ color: "#28A745" }} />
-                      ) : (
-                        <Typography color="text.secondary">{r.status || "unknown"}</Typography>
-                      )}
+                      <Box
+                        sx={{
+                          display: "inline-block",
+                          px: 1.5,
+                          py: 0.5,
+                          borderRadius: 4,
+                          background: r.status === "active" ? "#E8F5E9" : "#FFEBEE",
+                          color: r.status === "active" ? "#2E7D32" : "#C62828",
+                          fontSize: 12,
+                          fontWeight: 600,
+                          textTransform: "capitalize",
+                        }}
+                      >
+                        {r.status || "inactive"}
+                      </Box>
                     </TableCell>
                     <TableCell>
                       {editingComment === r.id ? (

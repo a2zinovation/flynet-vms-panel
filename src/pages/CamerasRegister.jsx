@@ -189,6 +189,7 @@ export default function CamerasRegister() {
         analytical: formData.analytical,
         storage: formData.storage,
         comments: formData.comments,
+        status: isEditMode ? undefined : 'active', // Default to active for new cameras
       };
 
       // Add protocol-specific fields

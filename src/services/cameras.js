@@ -21,9 +21,12 @@ export const cameraService = {
     const queryString = queryParams.toString();
     const endpoint = `/cameras${queryString ? `?${queryString}` : ''}`;
     
-    return await apiFetch(endpoint, {
+    const response = await apiFetch(endpoint, {
       method: 'GET',
     });
+    
+    // Handle standardized response: { status: 'success', data: { data: [...], total, ... }, message: '...' }
+    return response.data || response;
   },
 
   /**
@@ -32,9 +35,22 @@ export const cameraService = {
    * @returns {Promise} Camera details
    */
   getById: async (id) => {
-    return await apiFetch(`/cameras/${id}`, {
+    const response = await apiFetch(`/cameras/${id}`, {
       method: 'GET',
     });
+    return response.data || response;
+  },
+
+  /**
+   * Get camera stream URL (HLS endpoint)
+   * @param {number} id - Camera ID
+   * @returns {Promise} Stream URL
+   */
+  getStreamUrl: async (id) => {
+    const response = await apiFetch(`/cameras/${id}/stream`, {
+      method: 'GET',
+    });
+    return response.data || response;
   },
 
   /**
@@ -59,6 +75,32 @@ export const cameraService = {
     return await apiFetch(`/cameras/${id}`, {
       method: 'PUT',
       body: cameraData,
+    });
+  },
+
+  /**
+   * Update camera comments only
+   * @param {number} id - Camera ID
+   * @param {string} comments - New comments text
+   * @returns {Promise} Updated camera
+   */
+  updateComments: async (id, comments) => {
+    return await apiFetch(`/cameras/${id}/comments`, {
+      method: 'PATCH',
+      body: { comments },
+    });
+  },
+
+  /**
+   * Migrate camera to another server
+   * @param {number} id - Camera ID
+   * @param {string} server - Target server name
+   * @returns {Promise} Updated camera
+   */
+  migrateServer: async (id, server) => {
+    return await apiFetch(`/cameras/${id}/migrate-server`, {
+      method: 'PATCH',
+      body: { server },
     });
   },
 

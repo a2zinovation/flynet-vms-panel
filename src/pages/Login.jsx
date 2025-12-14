@@ -200,11 +200,12 @@ function EmailPasswordView({ onForgotPassword, onViewChange }) {
     try {
       const result = await login(email, password);
       
-      if (result.success) {
+      // Check standardized response format
+      if (!result.success) {
+        setError(result.message || "Invalid credentials");
+      } else {
         // Navigate to app on successful login
         navigate("/app");
-      } else {
-        setError(result.message || "Invalid credentials");
       }
     } catch (err) {
       setError("An error occurred. Please try again.");

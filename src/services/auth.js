@@ -3,7 +3,7 @@
 
 import apiFetch, { setAuthToken, removeAuthToken, setStoredUser, removeStoredUser } from './api';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_API_WWW_BASE_URL || 'http://api.pinkdreams.store/api';
 
 export const authService = {
   /**
@@ -25,34 +25,38 @@ export const authService = {
 
       const data = await response.json();
 
-      // Handle Laravel API response structure
-      // API returns: { Success: true, Data: { token, user info }, Message }
-      const success = data.Success || data.success;
-      const userData = data.Data || data.data || data.user;
-      const token = userData?.token || data.token;
-      const message = data.Message || data.message;
+      // Handle standardized API response: { status: 'success', message: '...', data: { token, ...user }, code: 200 }
+      const isSuccess = data.status === 'success' || response.ok;
+      const userData = data.data || {};
+      const token = userData.token || data.token;
+      const message = data.message || 'Login successful';
 
-      if (!response.ok || !success) {
+      if (!isSuccess) {
         return { 
           success: false, 
-          message: message || 'Invalid credentials login' 
+          message: data.message || 'Invalid credentials' 
+        };
+      }
+
+      if (!token) {
+        return { 
+          success: false, 
+          message: 'No authentication token received' 
         };
       }
 
       // Store token and user data
-      if (token) {
-        setAuthToken(token);
-      }
-      if (userData) {
-        // Store user data without the token field
-        const { token: _, ...userWithoutToken } = userData;
-        setStoredUser(userWithoutToken);
-      }
+      setAuthToken(token);
+      
+      // Store user data without the token field
+      const { token: _, ...userWithoutToken } = userData;
+      setStoredUser(userWithoutToken);
 
       return {
         success: true,
         token: token,
         user: userData,
+        message: message,
       };
     } catch (error) {
       console.error('Login error:', error);
@@ -99,8 +103,11 @@ export const authService = {
       });
 
       const data = await response.json();
+      
+      // Handle standardized response: { status: 'success|error', message: '...', code: 200|422 }
+      const isSuccess = data.status === 'success' || response.ok;
 
-      if (!response.ok) {
+      if (!isSuccess) {
         return { 
           success: false, 
           message: data.message || 'Failed to send reset email' 
@@ -137,8 +144,13 @@ export const authService = {
       });
 
       const data = await response.json();
+      
+      // Handle standardized response
+      const isSuccess = data.status === 'success' || response.ok;
+      const userData = data.data || {};
+      const token = userData.token || data.token;
 
-      if (!response.ok) {
+      if (!isSuccess) {
         return { 
           success: false, 
           message: data.message || 'QR login failed' 
@@ -146,17 +158,18 @@ export const authService = {
       }
 
       // Store token and user data
-      if (data.token) {
-        setAuthToken(data.token);
+      if (token) {
+        setAuthToken(token);
       }
-      if (data.user) {
-        setStoredUser(data.user);
+      if (userData) {
+        const { token: _, ...userWithoutToken } = userData;
+        setStoredUser(userWithoutToken);
       }
 
       return {
         success: true,
-        token: data.token,
-        user: data.user,
+        token: token,
+        user: userData,
       };
     } catch (error) {
       console.error('QR login error:', error);
@@ -172,9 +185,13 @@ export const authService = {
    * @returns {Promise} User profile data
    */
   getProfile: async () => {
-    return await apiFetch('/profile', {
+    const response = await apiFetch('/profile', {
       method: 'GET',
     });
+    
+    // Handle standardized response: { status: 'success', data: {...}, message: '...' }
+    // Return the data object directly so consuming components get clean data
+    return response.data || response;
   },
 
   /**
@@ -183,9 +200,12 @@ export const authService = {
    * @returns {Promise} Updated profile
    */
   updateProfile: async (profileData) => {
-    return await apiFetch('/profile', {
+    const response = await apiFetch('/profile', {
       method: 'PUT',
       body: profileData,
     });
+    
+    // Handle standardized response
+    return response.data || response;
   },
 };

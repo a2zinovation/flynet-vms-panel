@@ -35,16 +35,8 @@ export default function VideoStreamPlayer({ streamUrl, protocol = 'RTSP', poster
     // Your backend should expose an HLS endpoint like: /api/stream/hls/{camera_id}/playlist.m3u8
     const hlsUrl = convertToHLSUrl(streamUrl, protocol);
 
-    if (protocol === 'HLS' || hlsUrl.endsWith('.m3u8')) {
-      loadHLSStream(hlsUrl);
-    } else if (protocol === 'RTMP') {
-      // For RTMP, you might use a different player or convert to HLS
-      setError('RTMP streams require backend transcoding to HLS. Please configure your streaming server.');
-      setLoading(false);
-    } else {
-      setError('RTSP streams require backend transcoding to HLS. Please configure your streaming server.');
-      setLoading(false);
-    }
+    // Always try to load as HLS (either direct .m3u8 URL or converted)
+    loadHLSStream(hlsUrl);
 
     return () => {
       if (hlsRef.current) {
@@ -54,22 +46,39 @@ export default function VideoStreamPlayer({ streamUrl, protocol = 'RTSP', poster
   }, [streamUrl, protocol]);
 
   const convertToHLSUrl = (url, protocol) => {
-    // This is where you'd convert your RTSP/RTMP URL to HLS
-    // Example: If your backend exposes HLS at /api/stream/hls/{cameraId}
-    // You would extract camera ID and construct the HLS URL
+    const DEFAULT_STREAM = 'https://stream.pinkdreams.store/live/office_cam_01/index.m3u8';
     
-    // For demonstration, return a test HLS stream
-    // In production, replace this with your actual HLS endpoint
-    const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
+    // If no URL provided, use default stream
+    if (!url) {
+      console.log('No stream URL provided, using default stream');
+      return DEFAULT_STREAM;
+    }
     
-    // If it's already an HLS URL, return as is
-    if (url.includes('.m3u8')) {
+    console.log('Original Stream URL:', url, 'Protocol:', protocol);
+    
+    // If it's already an HTTP/HTTPS HLS URL (.m3u8), return as is
+    if (url && (url.startsWith('http://') || url.startsWith('https://')) && url.includes('.m3u8')) {
+      console.log('Using direct HLS URL:', url);
       return url;
     }
     
-    // Otherwise, construct HLS endpoint from your backend
-    // This is just an example - adjust according to your backend implementation
-    return `${API_BASE}/stream/hls/live.m3u8`;
+    // If it's an RTSP/RTMP URL, use default stream instead
+    if (url && (url.startsWith('rtsp://') || url.startsWith('rtmp://'))) {
+      console.warn('RTSP/RTMP streams require backend transcoding. Using default stream instead:', url);
+      return DEFAULT_STREAM;
+    }
+    
+    // If it's a relative path or other format with .m3u8, construct full URL
+    if (url.includes('.m3u8')) {
+      const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://api.pinkdreams.store/api';
+      const fullUrl = url.startsWith('/') ? `${API_BASE}${url}` : url;
+      console.log('Constructed HLS URL:', fullUrl);
+      return fullUrl;
+    }
+    
+    // For any other invalid format, use default stream
+    console.warn('Invalid stream URL format, using default stream');
+    return DEFAULT_STREAM;
   };
 
   const loadHLSStream = async (url) => {

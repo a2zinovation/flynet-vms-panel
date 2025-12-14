@@ -1,7 +1,7 @@
 // src/services/api.js
 // Base API configuration and utilities
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_API_WWW_BASE_URL || 'http://api.pinkdreams.store/api';
 
 /**
  * Get the authentication token from localStorage
@@ -86,7 +86,9 @@ export const apiFetch = async (endpoint, options = {}) => {
 
     // Handle other errors
     if (!response.ok) {
-      throw new Error(data.message || `HTTP Error ${response.status}`);
+      // API returns error with: { status: 'error', message: '...', code: 400/422 }
+      const errorMessage = data.message || `HTTP Error ${response.status}`;
+      throw new Error(errorMessage);
     }
 
     return data;

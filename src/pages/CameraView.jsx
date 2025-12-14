@@ -78,9 +78,9 @@ export default function CameraView() {
     );
   }
 
-  const streamUrl = camera.protocol === 'RTSP' 
-    ? (camera.rtsp_url || camera.rtspUrl)
-    : (camera.rtmp_url || camera.rtmpUrl);
+  // Get stream URL from camera - backend should provide HLS endpoint
+  const streamUrl = camera.stream_url || camera.rtsp_url || camera.rtmp_url || null;
+  const protocol = camera.protocol || 'RTSP';
 
   return (
     <Box sx={{ p: 3 }}>

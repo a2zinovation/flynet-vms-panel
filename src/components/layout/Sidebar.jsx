@@ -10,7 +10,10 @@ import { Box, IconButton, Typography, Divider, styled } from "@mui/material";
 import MenuIcon from "@mui/icons-material/Menu"; 
 
 // --- Styled Component to apply base sidebar layout and collapse logic ---
-const SidebarContainer = styled(Box)(({ theme, collapsed }) => ({
+// Prevent forwarding the custom `collapsed` prop to the DOM to avoid React warnings
+const SidebarContainer = styled(Box, {
+        shouldForwardProp: (prop) => prop !== "collapsed",
+})(({ theme, collapsed }) => ({
   width: collapsed ? '68px' : '260px',
   minWidth: collapsed ? '68px' : '260px',
   height: '100vh',
