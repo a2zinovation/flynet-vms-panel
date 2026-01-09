@@ -270,6 +270,13 @@ export default function NotificationCenter() {
     setSnackbar({ open: true, message, severity });
   };
 
+  const stripHtml = (html) => {
+    if (!html) return '';
+    const tmp = document.createElement('div');
+    tmp.innerHTML = html;
+    return tmp.textContent || tmp.innerText || '';
+  };
+
   const getNotificationIcon = (type) => {
     switch (type) {
       case "warning":
@@ -411,8 +418,8 @@ export default function NotificationCenter() {
                     )}
                   </Box>
                   <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
-                    {notif.message.substring(0, 100)}
-                    {notif.message.length > 100 ? "..." : ""}
+                    {stripHtml(notif.message).substring(0, 100)}
+                    {stripHtml(notif.message).length > 100 ? "..." : ""}
                   </Typography>
                   <Typography variant="caption" color="text.disabled">
                     {new Date(notif.created_at).toLocaleString()} • From: {notif.sender?.first_name} {notif.sender?.last_name}
@@ -484,8 +491,8 @@ export default function NotificationCenter() {
           </Box>
         </DialogTitle>
         <DialogContent dividers>
-          <Typography variant="body1" sx={{ mb: 2 }}>
-            {selectedNotif?.message}
+          <Typography variant="body1" sx={{ mb: 2, whiteSpace: 'pre-wrap' }}>
+            {stripHtml(selectedNotif?.message)}
           </Typography>
           <Divider sx={{ my: 2 }} />
           <Typography variant="caption" color="text.secondary">
@@ -679,8 +686,8 @@ export default function NotificationCenter() {
                     />
                   </Box>
                   <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                    {msg.message.substring(0, 150)}
-                    {msg.message.length > 150 ? "..." : ""}
+                    {stripHtml(msg.message).substring(0, 150)}
+                    {stripHtml(msg.message).length > 150 ? "..." : ""}
                   </Typography>
                   <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
                     <Chip label={msg.notification_type} size="small" sx={{ textTransform: "capitalize" }} />
