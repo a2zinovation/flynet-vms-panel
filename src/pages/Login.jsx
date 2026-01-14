@@ -218,7 +218,7 @@ function EmailPasswordView({ onForgotPassword, onViewChange }) {
   return (
     <Box sx={styles.contentBox}>
       <Typography variant="h1" sx={styles.welcomeText}>
-        Welcome!
+        Welcome Business!
       </Typography>
 
       <Button
