@@ -70,7 +70,7 @@ export default function VideoStreamPlayer({ streamUrl, protocol = 'RTSP', poster
     
     // If it's a relative path or other format with .m3u8, construct full URL
     if (url.includes('.m3u8')) {
-      const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://api.pinkdreams.store/api';
+      const API_BASE = import.meta.env.VITE_API_BASE_URL || 'https://api.pinkdreams.store/api';
       const fullUrl = url.startsWith('/') ? `${API_BASE}${url}` : url;
       console.log('Constructed HLS URL:', fullUrl);
       return fullUrl;

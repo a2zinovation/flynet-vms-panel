@@ -192,7 +192,7 @@ export default function Profile() {
       }
 
       // Update auth service to handle FormData
-      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://api.pinkdreams.store/api'}/profile`, {
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'https://api.pinkdreams.store/api'}/profile`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
